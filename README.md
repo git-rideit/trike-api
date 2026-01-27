@@ -1,44 +1,57 @@
-# Mongo API Template
+# Trike API
 
-A robust, scalable, and universal MongoDB template using Express.js and TypeScript. Designed for building modern web, mobile, and desktop applications.
+A robust and scalable RESTful API for a Tricycle Booking Application, built with Express.js, TypeScript, and MongoDB.
 
 ## 🚀 Features
 
-- **TypeScript**: Fully typed codebase for reliability and developer experience.
-- **Express.js**: Fast, minimalist web framework.
-- **MongoDB & Mongoose**: Asynchronous database interaction with object modeling.
-- **🔐 Authentication & Authorization**:
-  - **JWT (JSON Web Tokens)**: Stateless authentication suitable for Web & Mobile.
-  - **Bcrypt**: Secure password hashing.
-  - **Role-Based Access Control**: Granular permissions (`user`, `admin`).
-- **🛡️ Security**:
-  - `helmet`: Secure HTTP headers.
-  - `express-mongo-sanitize`: Prevent NoSQL injection.
-  - `cors`: Configurable Cross-Origin Resource Sharing.
-  - `express-rate-limit`: Brute-force protection.
-- **☁️ Media Management**:
-  - **Cloudinary**: Seamless image/video uploads.
-  - **Multer**: Efficient file handling.
-- **📝 Documentation**:
-  - **Swagger UI**: Interactive API testing playground at `/api-docs`.
-- **Validation**: Request data validation using `zod`.
-- **Logging**: Structured logging with `winston`.
-- **Universal Deployment**: Ready for Vercel, Docker, VPS, or any Node.js host.
+- **User Management**:
+  - Role-based access control (`user`, `driver`, `admin`).
+  - Secure authentication with JWT and Bcrypt.
+  - Driver profile management including license and vehicle details.
 
-## 🛠️ Getting Started
+- **Booking System**:
+  - Real-time booking lifecycle (`pending` -> `accepted` -> `in_progress` -> `completed`).
+  - Distance calculation using geospatial data (Coordinates).
+  - Support for efficient pickup and drop-off location tracking.
+
+- **Fare Calculation**:
+  - Dynamic fare computation based on base fare and distance (`baseFare + (distance * ratePerKm)`).
+  - Admin-configurable fare settings.
+
+- **Admin Dashboard Support**:
+  - Comprehensive analytics and reporting.
+  - Audit logging for critical actions.
+  - System-wide settings management.
+
+- **Security & Reliability**:
+  - Rate limiting and Brute-force protection.
+  - Data sanitization against NoSQL injection.
+  - Structured logging with Winston.
+
+## 🛠️ Tech Stack
+
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Language**: TypeScript
+- **Database**: MongoDB (Mongoose ODM)
+- **Documentation**: Swagger UI
+- **Validation**: Zod
+- **Media**: Cloudinary & Multer
+
+## ⚡ Getting Started
 
 ### Prerequisites
 
-- Node.js (v18+ recommended)
-- MongoDB (Atlas or Local)
-- Cloudinary Account (for media uploads)
+- Node.js (v18+)
+- MongoDB (Local or Atlas)
+- Cloudinary Account (Optional, for media uploads)
 
 ### Installation
 
 1. **Clone the repository**:
    ```bash
    git clone <repository-url>
-   cd mongo-api-template
+   cd trike-api
    ```
 
 2. **Install dependencies**:
@@ -46,23 +59,24 @@ A robust, scalable, and universal MongoDB template using Express.js and TypeScri
    npm install
    ```
 
-3. **Set up environment variables**:
+3. **Configure Environment**:
+   Copy the example env file:
    ```bash
    cp .env.example .env
    ```
-   open `.env` and configure:
-   - `MONGO_URI`
-   - `JWT_SECRET` & `JWT_EXPIRES_IN`
-   - `CLOUDINARY_*` credentials
+   Update `.env` with your credentials:
+   - `MONGO_URI`: Your MongoDB connection string.
+   - `JWT_SECRET`: Secret key for token generation.
+   - `CLOUDINARY_*`: API keys for image uploads.
 
-### Running the Application
+### Running the Server
 
-- **Development** (Hot Reload):
+- **Development Mode** (with hot-reload):
   ```bash
   npm run dev
   ```
 
-- **Production**:
+- **Production Build**:
   ```bash
   npm run build
   npm start
@@ -70,27 +84,23 @@ A robust, scalable, and universal MongoDB template using Express.js and TypeScri
 
 ## 📚 API Documentation
 
-Once the server is running, visit:
-**`http://localhost:3000/api-docs`**
+Interactive API documentation is available via Swagger UI.
+Once the server is running, verify the endpoints at:
 
-This provides a full GUI to:
-- Explore endpoints.
-- Authorize with your JWT token.
-- Test requests directly in the browser.
+**`http://localhost:3000/api-docs`**
 
 ## 📂 Project Structure
 
 ```
 src/
-├── config/         # Env, Database, Cloudinary, Swagger config
-├── controllers/    # Request/Response logic
-├── middleware/     # Auth, Errors, RateLimit, Upload, Validation
-├── models/         # Mongoose Schemas (User, etc.)
-├── routes/         # API Route definitions
-├── services/       # Business logic (e.g., Cloudinary)
-├── utils/          # Logger, AppError, CatchAsync
-├── app.ts          # Express App setup (Middleware wiring)
-└── server.ts       # Entry point (DB connect & Server start)
+├── config/         # Configuration (DB, Env, Swagger)
+├── controllers/    # Route Logic (Admin, Auth, Booking, Users)
+├── middleware/     # Auth, Validation, Error Handling
+├── models/         # Mongoose Schemas (Booking, FareConfig, User, etc.)
+├── routes/         # API Endpoint Definitions
+├── services/       # External Services (e.g., Cloudinary)
+├── utils/          # Helper Functions
+└── app.ts          # Express App setup
 ```
 
 ## 🔌 Key Endpoints
@@ -99,10 +109,13 @@ src/
 - `POST /api/v1/auth/register` - Create new account
 - `POST /api/v1/auth/login` - Get access token
 
+### Bookings
+- `POST /api/v1/bookings` - Create a booking
+- `GET /api/v1/bookings` - Get user bookings
+
 ### Users
 - `GET /api/v1/users` - Get all users (Admin only)
 - `POST /api/v1/users` - Create user (Admin only)
-- `GET /api/v1/users/:id` - Get user details
 
 ## 👤 Author
 

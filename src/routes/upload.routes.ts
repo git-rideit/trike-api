@@ -12,7 +12,8 @@ const storage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         const ext = path.extname(file.originalname);
-        cb(null, `user-${req.user!._id}-${Date.now()}${ext}`);
+        const userId = req.user ? req.user._id : 'guest';
+        cb(null, `user-${userId}-${Date.now()}${ext}`);
     }
 });
 
@@ -28,7 +29,7 @@ const upload = multer({
     }
 });
 
-router.use(protect);
+// router.use(protect); // Uploads now public for registration
 
 router.post('/', upload.single('file'), (req: Request, res: Response) => {
     if (!req.file) {

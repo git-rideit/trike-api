@@ -6,12 +6,16 @@ const router = express.Router();
 
 router.use(protect);
 
+router.post('/fare', bookingController.calculateFare); // Calculation can be public or protected? Protected for now.
 router.post('/', bookingController.createBooking);
 router.get('/my-bookings', bookingController.getMyBookings);
+router.get('/nearby-drivers', bookingController.getNearbyDrivers);
 
 // Admin / Driver routes
-router.get('/', restrictTo('admin', 'driver'), bookingController.getAllBookings);
-router.patch('/:id/status', restrictTo('admin', 'driver', 'user'), bookingController.updateBookingStatus); // User can cancel too? Logic in controller handles it?
+router.get('/available', restrictTo('driver', 'admin'), bookingController.getAvailableBookings);
+router.get('/', restrictTo('admin'), bookingController.getAllBookings);
+router.patch('/:id/status', restrictTo('admin', 'driver', 'user'), bookingController.updateBookingStatus);
+router.patch('/:id/pay', restrictTo('admin', 'driver', 'user'), bookingController.markAsPaid);
 
 // Specific restriction refinement can be done in controller or separate routes
 // e.g. User can only cancel own booking. Controller logic needed for that security check.

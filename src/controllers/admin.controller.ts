@@ -4,6 +4,7 @@ import DriverProfile from '../models/driver_profile.model';
 import FareConfig from '../models/fare_config.model';
 import { catchAsync } from '../utils/catchAsync';
 import { AppError } from '../utils/AppError';
+import { emailService } from '../services/email.service';
 
 // USER MANAGEMENT
 export const getAllUsers = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
@@ -81,6 +82,11 @@ export const approveDriver = catchAsync(async (req: Request, res: Response, next
         isVerified: true,
         role: 'driver' // Ensure they have driver role 
     }, { new: true });
+
+    if (user) {
+        // Send email notification
+        await emailService.sendDriverApprovalEmail(user.email, user.name);
+    }
 
     res.status(200).json({
         status: 'success',

@@ -15,6 +15,7 @@ import { env } from './config/env';
 import authRouter from './routes/auth.routes';
 import adminRouter from './routes/admin.routes';
 import bookingRouter from './routes/booking.routes';
+import safetyRouter from './routes/safety.routes';
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/bookings', bookingRouter);
+app.use('/api/v1/safety', safetyRouter);
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -79,6 +81,20 @@ app.get('/api', (req, res) => {
     res.status(200).json({
         message: 'Use /api/v1 for API endpoints',
         versions: ['v1']
+    });
+});
+
+app.get('/api/v1', (req, res) => {
+    res.status(200).json({
+        status: 'success',
+        message: 'Welcome to Trike API v1',
+        endpoints: {
+            auth: '/auth',
+            users: '/users',
+            admin: '/admin',
+            bookings: '/bookings',
+            safety: '/safety'
+        }
     });
 });
 

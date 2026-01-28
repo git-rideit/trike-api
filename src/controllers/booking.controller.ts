@@ -15,6 +15,11 @@ export const calculateFare = catchAsync(async (req: Request, res: Response, next
 
     let calculation;
 
+    // Get config for fare calculation
+    const config = await FareConfig.findOne().sort({ createdAt: -1 });
+    const baseFare = config ? config.baseFare : 12;
+    const ratePerKm = config ? config.ratePerKm : 2;
+
     // If distance is provided directly, use it
     if (distance !== undefined) {
         const dist = parseFloat(distance as string);
@@ -25,18 +30,22 @@ export const calculateFare = catchAsync(async (req: Request, res: Response, next
             });
         }
 
-        const config = await FareConfig.findOne().sort({ createdAt: -1 });
-        const baseFare = config ? config.baseFare : 12;
-        const ratePerKm = config ? config.ratePerKm : 2;
-
         const fare = baseFare + (dist * ratePerKm);
         calculation = {
-            fare: Math.ceil(fare),
+            calculatedFare: Math.ceil(fare),
+            baseFare,
+            ratePerKm,
             distance: dist
         };
     } else if (pickup && dropoff) {
         // Use barangay-based calculation
-        calculation = await FareService.calculateFare(pickup as string, dropoff as string);
+        const result = await FareService.calculateFare(pickup as string, dropoff as string);
+        calculation = {
+            calculatedFare: result.fare,
+            baseFare,
+            ratePerKm,
+            distance: result.distance
+        };
     } else {
         return res.status(400).json({
             status: 'fail',

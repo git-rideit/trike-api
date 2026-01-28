@@ -33,7 +33,9 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
 
         res.status(201).json({
             status: 'success',
-            url: result.secure_url // Return Cloudinary URL
+            data: {
+                url: result.secure_url // Return Cloudinary URL inside 'data'
+            }
         });
     } catch (error: any) {
         res.status(500).json({

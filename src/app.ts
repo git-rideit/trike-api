@@ -16,6 +16,7 @@ import authRouter from './routes/auth.routes';
 import adminRouter from './routes/admin.routes';
 import bookingRouter from './routes/booking.routes';
 import safetyRouter from './routes/safety.routes';
+import driverRouter from './routes/driver.routes';
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/api/v1/users', userRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/bookings', bookingRouter);
 app.use('/api/v1/safety', safetyRouter);
+app.use('/api/v1/drivers', driverRouter);
 
 // Health Check
 app.get('/health', (req, res) => {

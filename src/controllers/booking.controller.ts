@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import Booking from '../models/booking.model';
 import DriverProfile from '../models/driver_profile.model';
+import Notification from '../models/notification.model'; // NEW
+import { Parser } from 'json2csv'; // NEW
 import { FareService } from '../services/fare.service';
 import { catchAsync } from '../utils/catchAsync';
 import { AppError } from '../utils/AppError';
@@ -151,6 +153,18 @@ export const updateBookingStatus = catchAsync(async (req: Request, res: Response
             driver: req.user._id
         }, { new: true });
 
+        if (!booking) {
+            return next(new AppError('Booking could not be updated', 500));
+        }
+
+        // Create Notification for Student
+        await Notification.create({
+            user: booking.user,
+            title: 'Ride Accepted',
+            message: 'A driver has accepted your ride request.',
+            type: 'booking'
+        });
+
         return res.status(200).json({ status: 'success', data: { booking } });
     }
 
@@ -174,6 +188,19 @@ export const updateBookingStatus = catchAsync(async (req: Request, res: Response
 
     if (!booking) {
         return next(new AppError('No booking found with that ID', 404));
+    }
+
+    // Create Notification
+    const recipient = req.user.role === 'driver' ? booking.user : booking.driver;
+    // Only send if recipient exists (e.g. if driver cancels, tell user. If user cancels, tell driver?)
+    // Actually booking.driver might be null if cancelled before acceptance, but here we are in "assigned driver" block usually.
+    if (recipient) {
+        await Notification.create({
+            user: recipient,
+            title: `Ride Update: ${status}`,
+            message: `Your ride status has been updated to ${status}.`,
+            type: 'booking'
+        });
     }
 
     res.status(200).json({
@@ -208,4 +235,33 @@ export const markAsPaid = catchAsync(async (req: Request, res: Response, next: N
             booking
         }
     });
+});
+
+export const exportBookings = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    // 1. Get bookings
+    const bookings = await Booking.find({
+        $or: [{ driver: req.user._id }, { user: req.user._id }],
+        status: 'completed'
+    }).populate('driver user');
+
+    if (bookings.length === 0) {
+        return next(new AppError('No completed bookings found to export', 404));
+    }
+
+    // 2. Define fields
+    const fields = ['_id', 'pickupLocation.name', 'dropoffLocation.name', 'fare', 'status', 'createdAt'];
+    const opts = { fields };
+
+    // 3. Convert to CSV
+    try {
+        const parser = new Parser(opts);
+        const csv = parser.parse(bookings);
+
+        // 4. Send File
+        res.header('Content-Type', 'text/csv');
+        res.attachment('ride_history.csv');
+        return res.send(csv);
+    } catch (err) {
+        return next(new AppError('Error generating CSV', 500));
+    }
 });

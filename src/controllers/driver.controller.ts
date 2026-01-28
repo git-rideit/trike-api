@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import DriverProfile from '../models/driver_profile.model';
+import Booking from '../models/booking.model';
 import { catchAsync } from '../utils/catchAsync';
 import { AppError } from '../utils/AppError';
 
@@ -66,6 +67,68 @@ export const getDriver = catchAsync(async (req: Request, res: Response, next: Ne
         status: 'success',
         data: {
             driver
+        }
+    });
+});
+
+export const getDriverStats = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    // Aggregation for Total Earnings and Trip Count
+    const stats = await Booking.aggregate([
+        {
+            $match: {
+                driver: req.user._id,
+                status: 'completed'
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalEarnings: { $sum: '$fare' },
+                tripCount: { $sum: 1 }
+            }
+        }
+    ]);
+
+    const recentTrips = await Booking.find({
+        driver: req.user._id,
+        status: 'completed'
+    })
+        .sort({ createdAt: -1 })
+        .limit(5);
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            totalEarnings: stats.length > 0 ? stats[0].totalEarnings : 0,
+            tripCount: stats.length > 0 ? stats[0].tripCount : 0,
+            recentTrips
+        }
+    });
+});
+
+export const getEarningsHistory = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    // Group by Date (Daily)
+    const history = await Booking.aggregate([
+        {
+            $match: {
+                driver: req.user._id,
+                status: 'completed'
+            }
+        },
+        {
+            $group: {
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                dailyEarnings: { $sum: '$fare' },
+                tripCount: { $sum: 1 }
+            }
+        },
+        { $sort: { _id: -1 } }
+    ]);
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            history
         }
     });
 });

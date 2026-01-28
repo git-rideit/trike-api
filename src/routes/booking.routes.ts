@@ -9,6 +9,7 @@ router.use(protect);
 router.post('/fare', bookingController.calculateFare); // Calculation can be public or protected? Protected for now.
 router.post('/', bookingController.createBooking);
 router.get('/my-bookings', bookingController.getMyBookings);
+router.get('/export', bookingController.exportBookings);
 router.get('/nearby-drivers', bookingController.getNearbyDrivers);
 
 // Admin / Driver routes

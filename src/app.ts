@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path'; // NEW
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
 import compression from 'compression';
@@ -17,6 +18,8 @@ import adminRouter from './routes/admin.routes';
 import bookingRouter from './routes/booking.routes';
 import safetyRouter from './routes/safety.routes';
 import driverRouter from './routes/driver.routes';
+import notificationRouter from './routes/notification.routes'; // NEW
+import uploadRouter from './routes/upload.routes'; // NEW
 
 const app = express();
 
@@ -59,6 +62,11 @@ app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/bookings', bookingRouter);
 app.use('/api/v1/safety', safetyRouter);
 app.use('/api/v1/drivers', driverRouter);
+app.use('/api/v1/notifications', notificationRouter); // NEW
+app.use('/api/v1/upload', uploadRouter); // NEW
+
+// Serve Uploads
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health Check
 app.get('/health', (req, res) => {

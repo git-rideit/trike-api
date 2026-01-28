@@ -3,14 +3,46 @@ import Booking from '../models/booking.model';
 import DriverProfile from '../models/driver_profile.model';
 import Notification from '../models/notification.model'; // NEW
 import { Parser } from 'json2csv'; // NEW
+import FareConfig from '../models/fare_config.model'; // NEW
 import { FareService } from '../services/fare.service';
 import { catchAsync } from '../utils/catchAsync';
 import { AppError } from '../utils/AppError';
 
 export const calculateFare = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     // Support both POST body and GET query params
-    const { pickup, dropoff } = req.method === 'GET' ? req.query : req.body;
-    const calculation = await FareService.calculateFare(pickup as string, dropoff as string);
+    const params = req.method === 'GET' ? req.query : req.body;
+    const { pickup, dropoff, distance } = params;
+
+    let calculation;
+
+    // If distance is provided directly, use it
+    if (distance !== undefined) {
+        const dist = parseFloat(distance as string);
+        if (isNaN(dist) || dist < 0) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Invalid distance parameter'
+            });
+        }
+
+        const config = await FareConfig.findOne().sort({ createdAt: -1 });
+        const baseFare = config ? config.baseFare : 12;
+        const ratePerKm = config ? config.ratePerKm : 2;
+
+        const fare = baseFare + (dist * ratePerKm);
+        calculation = {
+            fare: Math.ceil(fare),
+            distance: dist
+        };
+    } else if (pickup && dropoff) {
+        // Use barangay-based calculation
+        calculation = await FareService.calculateFare(pickup as string, dropoff as string);
+    } else {
+        return res.status(400).json({
+            status: 'fail',
+            message: 'Please provide either distance or both pickup and dropoff locations'
+        });
+    }
 
     res.status(200).json({
         status: 'success',

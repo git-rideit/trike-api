@@ -8,8 +8,9 @@ import { catchAsync } from '../utils/catchAsync';
 import { AppError } from '../utils/AppError';
 
 export const calculateFare = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const { pickup, dropoff } = req.body;
-    const calculation = await FareService.calculateFare(pickup, dropoff);
+    // Support both POST body and GET query params
+    const { pickup, dropoff } = req.method === 'GET' ? req.query : req.body;
+    const calculation = await FareService.calculateFare(pickup as string, dropoff as string);
 
     res.status(200).json({
         status: 'success',

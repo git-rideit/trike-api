@@ -20,6 +20,7 @@ import safetyRouter from './routes/safety.routes';
 import driverRouter from './routes/driver.routes';
 import notificationRouter from './routes/notification.routes'; // NEW
 import uploadRouter from './routes/upload.routes'; // NEW
+import fareRouter from './routes/fare.routes'; // NEW
 
 const app = express();
 
@@ -64,6 +65,7 @@ app.use('/api/v1/safety', safetyRouter);
 app.use('/api/v1/drivers', driverRouter);
 app.use('/api/v1/notifications', notificationRouter); // NEW
 app.use('/api/v1/upload', uploadRouter); // NEW
+app.use('/api/v1/fare', fareRouter); // NEW
 
 // Serve Uploads
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

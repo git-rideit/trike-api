@@ -1,21 +1,12 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response } from 'express';
 import multer from 'multer';
-import path from 'path';
 import { protect } from '../middleware/authMiddleware';
+import { uploadToCloudinary } from '../services/cloudinary.service';
 
 const router = express.Router();
 
-// Multer Config
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Ensure this directory exists
-    },
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        const userId = req.user ? req.user._id : 'guest';
-        cb(null, `user-${userId}-${Date.now()}${ext}`);
-    }
-});
+// Memory Storage for Cloudinary Upload
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage,
@@ -31,18 +22,25 @@ const upload = multer({
 
 // router.use(protect); // Uploads now public for registration
 
-router.post('/', upload.single('file'), (req: Request, res: Response) => {
-    if (!req.file) {
-        return res.status(400).json({ status: 'fail', message: 'No file uploaded' });
+router.post('/', upload.single('file'), async (req: Request, res: Response) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ status: 'fail', message: 'No file uploaded' });
+        }
+
+        // Upload buffer to Cloudinary
+        const result = await uploadToCloudinary(req.file.buffer, 'trike-users');
+
+        res.status(201).json({
+            status: 'success',
+            url: result.secure_url // Return Cloudinary URL
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message || 'Upload failed'
+        });
     }
-
-    // Return the relative path. In app.ts we serve 'uploads' static folder.
-    const url = `/uploads/${req.file.filename}`;
-
-    res.status(201).json({
-        status: 'success',
-        url
-    });
 });
 
 export default router;

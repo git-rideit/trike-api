@@ -111,6 +111,33 @@ export const getMyBookings = catchAsync(async (req: Request, res: Response, next
     });
 });
 
+export const getBookingById = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const booking = await Booking.findById(req.params.id)
+        .populate('user', 'name email phoneNumber')
+        .populate('driver', 'name email phoneNumber');
+
+    if (!booking) {
+        return next(new AppError('No booking found with that ID', 404));
+    }
+
+    // Authorization: User can see their own bookings, driver can see assigned bookings, admin can see all
+    const isAuthorized =
+        booking.user._id.toString() === req.user._id.toString() ||
+        booking.driver?._id.toString() === req.user._id.toString() ||
+        req.user.role === 'admin';
+
+    if (!isAuthorized) {
+        return next(new AppError('Not authorized to access this booking', 403));
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            booking
+        }
+    });
+});
+
 export const getAllBookings = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const bookings = await Booking.find().sort({ createdAt: -1 });
 

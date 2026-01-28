@@ -14,6 +14,7 @@ router.get('/nearby-drivers', bookingController.getNearbyDrivers);
 
 // Admin / Driver routes
 router.get('/available', restrictTo('driver', 'admin'), bookingController.getAvailableBookings);
+router.get('/:id', bookingController.getBookingById);
 router.get('/', restrictTo('admin'), bookingController.getAllBookings);
 router.patch('/:id/status', restrictTo('admin', 'driver', 'user'), bookingController.updateBookingStatus);
 router.patch('/:id/pay', restrictTo('admin', 'driver', 'user'), bookingController.markAsPaid);

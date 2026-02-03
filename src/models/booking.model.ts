@@ -58,6 +58,20 @@ const BookingSchema: Schema = new Schema({
     timestamps: true
 });
 
+BookingSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        if (ret.pickupLocation && Array.isArray(ret.pickupLocation.coordinates)) {
+            const [lng, lat] = ret.pickupLocation.coordinates;
+            ret.pickupLocation.coordinates = { lat, lng };
+        }
+        if (ret.dropoffLocation && Array.isArray(ret.dropoffLocation.coordinates)) {
+            const [lng, lat] = ret.dropoffLocation.coordinates;
+            ret.dropoffLocation.coordinates = { lat, lng };
+        }
+        return ret;
+    }
+});
+
 BookingSchema.index({ 'pickupLocation.coordinates': '2dsphere' });
 
 export default mongoose.model<IBooking>('Booking', BookingSchema);

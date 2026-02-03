@@ -1,9 +1,12 @@
 
 import mongoose from 'mongoose';
 import Booking from '../src/models/booking.model';
+import DriverProfile from '../src/models/driver_profile.model';
+import Report from '../src/models/report.model';
 
-// Mock the Booking model usage without connecting to DB
+// Mock the model usage without connecting to DB
 async function run() {
+    console.log("--- BOOKING ---");
     const mockPickup = {
         address: "Test Pickup",
         coordinates: [121.0, 14.5] // [lng, lat]
@@ -23,15 +26,45 @@ async function run() {
         status: 'pending'
     });
 
-    const json = booking.toJSON();
-    console.log("Booking JSON Reulst:");
-    console.log(JSON.stringify(json, null, 2));
+    const bookingJson = booking.toJSON() as any;
+    if (bookingJson.pickupLocation) {
+        console.log("Booking JSON Result:", JSON.stringify(bookingJson.pickupLocation.coordinates, null, 2));
+    }
 
-    // Check type of coordinates
-    console.log("\nType Checks:");
-    console.log("pickupLocation.coordinates is Array?", Array.isArray(json.pickupLocation.coordinates));
-    // @ts-ignore
-    console.log("pickupLocation.coordinates.lat?", json.pickupLocation.coordinates.lat);
+
+    console.log("\n--- DRIVER PROFILE ---");
+    const driver = new DriverProfile({
+        user: new mongoose.Types.ObjectId(),
+        licenseNumber: "D123",
+        licenseExpiry: new Date(),
+        tricyclePlateNumber: "ABC 123",
+        documents: [],
+        isOnline: true,
+        currentLocation: {
+            type: "Point",
+            coordinates: [123.0, 15.0]
+        }
+    });
+    const driverJson = driver.toJSON() as any;
+    if (driverJson.currentLocation) {
+        console.log("Driver JSON Result:", JSON.stringify(driverJson.currentLocation.coordinates, null, 2));
+    }
+
+
+    console.log("\n--- REPORT ---");
+    const report = new Report({
+        reporter: new mongoose.Types.ObjectId(),
+        type: 'complaint',
+        category: 'rude',
+        location: {
+            type: "Point",
+            coordinates: [124.0, 16.0]
+        }
+    });
+    const reportJson = report.toJSON() as any;
+    if (reportJson.location) {
+        console.log("Report JSON Result:", JSON.stringify(reportJson.location.coordinates, null, 2));
+    }
 }
 
 run().catch(console.error);

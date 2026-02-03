@@ -41,6 +41,16 @@ const ReportSchema: Schema = new Schema({
     timestamps: true
 });
 
+ReportSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        if (ret.location && Array.isArray(ret.location.coordinates)) {
+            const [lng, lat] = ret.location.coordinates;
+            ret.location.coordinates = { lat, lng };
+        }
+        return ret;
+    }
+});
+
 ReportSchema.index({ location: '2dsphere' });
 
 export default mongoose.model<IReport>('Report', ReportSchema);

@@ -42,6 +42,16 @@ const DriverProfileSchema: Schema = new Schema({
     timestamps: true
 });
 
+DriverProfileSchema.set('toJSON', {
+    transform: (doc, ret: any) => {
+        if (ret.currentLocation && Array.isArray(ret.currentLocation.coordinates)) {
+            const [lng, lat] = ret.currentLocation.coordinates;
+            ret.currentLocation.coordinates = { lat, lng };
+        }
+        return ret;
+    }
+});
+
 // Index for geospatial queries
 DriverProfileSchema.index({ currentLocation: '2dsphere' });
 

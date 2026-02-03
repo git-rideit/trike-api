@@ -37,7 +37,7 @@ app.use(cors({
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Rate Limiting
-app.use('/api', rateLimiter);
+// app.use('/api', rateLimiter);
 
 // Body parser, reading data from body into req.body
 app.use(express.json({ limit: '10kb' }));

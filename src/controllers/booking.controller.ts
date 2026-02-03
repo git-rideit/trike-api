@@ -152,7 +152,22 @@ export const getAllBookings = catchAsync(async (req: Request, res: Response, nex
 
 export const getAvailableBookings = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     // For Polling: Drivers look for pending bookings nearby
-    // In a real app, use maxDistance. For now, just return all pending.
+
+    // Auto-expire: Mark pending bookings older than 1 minute as cancelled
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+    await Booking.updateMany(
+        {
+            status: 'pending',
+            createdAt: { $lt: oneMinuteAgo }
+        },
+        {
+            $set: {
+                status: 'cancelled',
+                cancellationReason: 'Timeout - No driver accepted',
+                cancelledBy: 'admin' // or system
+            }
+        }
+    );
 
     // Optional: Filter by vicinity if coords are passed
     // const { lat, lng } = req.query;

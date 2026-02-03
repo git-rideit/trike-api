@@ -102,5 +102,20 @@ export const login = catchAsync(async (req: Request, res: Response, next: NextFu
         return next(new AppError('Incorrect email or password', 401));
     }
 
-    createSendToken(user, 200, res);
+    // Convert to object to attach profile
+    const userObj = user.toObject();
+
+    if (user.role === 'driver') {
+        const driverProfile = await DriverProfile.findOne({ user: user._id });
+        if (driverProfile) {
+            (userObj as any).driverProfile = driverProfile;
+        }
+    } else if (user.role === 'student') {
+        const studentProfile = await StudentProfile.findOne({ user: user._id });
+        if (studentProfile) {
+            (userObj as any).studentProfile = studentProfile;
+        }
+    }
+
+    createSendToken(userObj, 200, res);
 });

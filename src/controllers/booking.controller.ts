@@ -130,10 +130,20 @@ export const getBookingById = catchAsync(async (req: Request, res: Response, nex
         return next(new AppError('Not authorized to access this booking', 403));
     }
 
+    // NEW: Fetch driver's current location if driver is assigned
+    let driverLocation = null;
+    if (booking.driver) {
+        const driverProfile = await DriverProfile.findOne({ user: booking.driver._id });
+        if (driverProfile) {
+            driverLocation = driverProfile.currentLocation;
+        }
+    }
+
     res.status(200).json({
         status: 'success',
         data: {
-            booking
+            booking,
+            driverLocation // Add this to response
         }
     });
 });

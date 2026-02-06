@@ -19,6 +19,7 @@ const loginSchema = z.object({
     body: z.object({
         email: z.string().email(),
         password: z.string().min(1),
+        role: z.enum(['user', 'admin', 'driver', 'student']).optional(),
     }),
 });
 
@@ -28,9 +29,17 @@ const forgotPasswordSchema = z.object({
     }),
 });
 
+const verifyCodeSchema = z.object({
+    body: z.object({
+        email: z.string().email(),
+        code: z.string().length(6), // Assuming 6 digit code
+    }),
+});
+
 const resetPasswordSchema = z.object({
     body: z.object({
-        token: z.string().min(1),
+        email: z.string().email(),
+        code: z.string().length(6),
         password: z.string().min(8),
     }),
 });
@@ -134,6 +143,7 @@ router.post('/login', validate(loginSchema), authController.login);
 // Forgot / Reset password
 router.patch('/update-password', protect, authController.updatePassword);
 router.post('/forgot-password', validate(forgotPasswordSchema), authController.forgotPassword);
+router.post('/verify-code', validate(verifyCodeSchema), authController.verifyCode);
 router.post('/reset-password', validate(resetPasswordSchema), authController.resetPassword);
 
 /**

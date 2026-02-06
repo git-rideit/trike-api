@@ -104,6 +104,11 @@ export const login = catchAsync(async (req: Request, res: Response, next: NextFu
         return next(new AppError('Incorrect email or password', 401));
     }
 
+    // Check if role matches if provided
+    if (req.body.role && user.role !== req.body.role) {
+        return next(new AppError('Unauthorized access for this role', 401));
+    }
+
     // Convert to object to attach profile
     const userObj = user.toObject();
 
@@ -129,34 +134,50 @@ export const forgotPassword = catchAsync(async (req: Request, res: Response, nex
     const user = await User.findOne({ email });
     if (!user) return next(new AppError('No user found with that email', 404));
 
-    // Generate token
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    // Generate 6-digit random code
+    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
     user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     await user.save({ validateBeforeSave: false });
 
-    const resetUrl = `${req.protocol}://${req.get('host')}/auth/reset-password/${resetToken}`;
+    // Send email with code
+    await emailService.sendPasswordResetCode(user.email, (user as any).name || 'User', resetToken);
 
-    // Send email (best effort)
-    await emailService.sendPasswordResetEmail(user.email, (user as any).name || 'User', resetUrl);
-
-    res.status(200).json({ status: 'success', message: 'Password reset token sent', data: { resetToken } });
+    res.status(200).json({ status: 'success', message: 'Password reset code sent' });
 });
 
-export const resetPassword = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const { token, password } = req.body;
-    if (!token || !password) return next(new AppError('Token and new password are required', 400));
+export const verifyCode = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { email, code } = req.body;
+    if (!email || !code) return next(new AppError('Email and code are required', 400));
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedToken = crypto.createHash('sha256').update(code).digest('hex');
 
     const user = await User.findOne({
+        email,
         resetPasswordToken: hashedToken,
         resetPasswordExpires: { $gt: Date.now() },
     });
 
-    if (!user) return next(new AppError('Token is invalid or has expired', 400));
+    if (!user) return next(new AppError('Invalid or expired code', 400));
+
+    res.status(200).json({ status: 'success', message: 'Code verified successfully' });
+});
+
+export const resetPassword = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { email, code, password } = req.body;
+    if (!email || !code || !password) return next(new AppError('Email, code, and new password are required', 400));
+
+    const hashedToken = crypto.createHash('sha256').update(code).digest('hex');
+
+    const user = await User.findOne({
+        email,
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) return next(new AppError('Invalid or expired code', 400));
 
     user.password = password;
     user.resetPasswordToken = undefined as any;

@@ -4,6 +4,33 @@ import Booking from '../models/booking.model';
 import { catchAsync } from '../utils/catchAsync';
 import { AppError } from '../utils/AppError';
 
+export const updateProfile = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { contactNumber, address, age } = req.body;
+    // Note: To update user fields like name, we would need to update the User model as well.
+    // For now, let's allow updating Driver specific fields.
+
+    const driver = await DriverProfile.findOneAndUpdate(
+        { user: req.user._id },
+        {
+            contactNumber,
+            address,
+            age
+        },
+        { new: true, runValidators: true }
+    );
+
+    if (!driver) {
+        return next(new AppError('Driver profile not found', 404));
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            driver
+        }
+    });
+});
+
 export const updateLocation = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const { latitude, longitude } = req.body;
 

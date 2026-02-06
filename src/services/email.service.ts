@@ -35,6 +35,24 @@ class EmailService {
         }
     }
 
+    async sendPasswordResetEmail(email: string, name: string, resetUrl: string) {
+        const mailOptions = {
+            from: `"Trike Password Reset" <${env.EMAIL_USER}>`,
+            to: email,
+            subject: 'Password Reset Request',
+            text: `Hello ${name},\n\nYou requested a password reset. Use the following link to reset your password:\n\n${resetUrl}\n\nIf you didn't request this, please ignore this email.`,
+            html: `<p>Hello <b>${name}</b>,</p><p>You requested a password reset. Click the link below to reset your password:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you didn't request this, ignore this email.</p>`
+        };
+
+        try {
+            await this.transporter.sendMail(mailOptions);
+            logger.info(`Password reset email sent to ${email}`);
+        } catch (error) {
+            logger.error(`Error sending password reset email: ${error}`);
+            // Do not throw; caller can decide how to respond
+        }
+    }
+
     async sendSOSEmail(userEmail: string, userName: string, lat: number, lng: number, emergencyContactEmail?: string) {
         const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
         const recipients = [env.ADMIN_EMAIL]; // Always alert admin

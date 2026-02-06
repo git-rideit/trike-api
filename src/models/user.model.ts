@@ -5,6 +5,8 @@ export interface IUser extends Document {
     name: string;
     email: string;
     password?: string;
+    resetPasswordToken?: string;
+    resetPasswordExpires?: Date;
     role: 'user' | 'admin' | 'driver' | 'student';
     isVerified: boolean;
     status: 'active' | 'suspended' | 'deactivated' | 'pending';
@@ -31,6 +33,13 @@ const UserSchema: Schema = new Schema({
         type: String,
         default: ''
     },
+    notificationPreferences: {
+        pushNotifications: { type: Boolean, default: true },
+        emailNotifications: { type: Boolean, default: true },
+        smsNotifications: { type: Boolean, default: false }
+    },
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
 }, {
     timestamps: true,
 });

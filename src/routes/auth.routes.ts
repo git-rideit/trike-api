@@ -1,6 +1,7 @@
 import express from 'express';
 import * as authController from '../controllers/auth.controller';
 import { validate } from '../middleware/validate';
+import { protect } from '../middleware/authMiddleware';
 import { z } from 'zod';
 
 const router = express.Router();
@@ -18,6 +19,19 @@ const loginSchema = z.object({
     body: z.object({
         email: z.string().email(),
         password: z.string().min(1),
+    }),
+});
+
+const forgotPasswordSchema = z.object({
+    body: z.object({
+        email: z.string().email(),
+    }),
+});
+
+const resetPasswordSchema = z.object({
+    body: z.object({
+        token: z.string().min(1),
+        password: z.string().min(8),
     }),
 });
 
@@ -116,6 +130,11 @@ router.post('/register', validate(registerSchema), authController.register);
  *         description: Login successful
  */
 router.post('/login', validate(loginSchema), authController.login);
+
+// Forgot / Reset password
+router.patch('/update-password', protect, authController.updatePassword);
+router.post('/forgot-password', validate(forgotPasswordSchema), authController.forgotPassword);
+router.post('/reset-password', validate(resetPasswordSchema), authController.resetPassword);
 
 /**
  * @swagger

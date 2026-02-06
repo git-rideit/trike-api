@@ -119,6 +119,7 @@ router.route('/')
     .post(validate(createUserSchema), userController.createUser);
 
 router.patch('/profile-picture', upload.single('profilePicture'), userController.updateProfilePicture);
+router.patch('/preferences', userController.updatePreferences);
 
 router.route('/:id')
     .get(userController.getUser);

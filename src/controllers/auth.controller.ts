@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { emailService } from '../services/email.service';
 import { env } from '../config/env';
 import User from '../models/user.model';
 import StudentProfile from '../models/student_profile.model';
@@ -118,4 +120,71 @@ export const login = catchAsync(async (req: Request, res: Response, next: NextFu
     }
 
     createSendToken(userObj, 200, res);
+});
+
+export const forgotPassword = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { email } = req.body;
+    if (!email) return next(new AppError('Please provide email', 400));
+
+    const user = await User.findOne({ email });
+    if (!user) return next(new AppError('No user found with that email', 404));
+
+    // Generate token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    await user.save({ validateBeforeSave: false });
+
+    const resetUrl = `${req.protocol}://${req.get('host')}/auth/reset-password/${resetToken}`;
+
+    // Send email (best effort)
+    await emailService.sendPasswordResetEmail(user.email, (user as any).name || 'User', resetUrl);
+
+    res.status(200).json({ status: 'success', message: 'Password reset token sent', data: { resetToken } });
+});
+
+export const resetPassword = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { token, password } = req.body;
+    if (!token || !password) return next(new AppError('Token and new password are required', 400));
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) return next(new AppError('Token is invalid or has expired', 400));
+
+    user.password = password;
+    user.resetPasswordToken = undefined as any;
+    user.resetPasswordExpires = undefined as any;
+    await user.save();
+
+    // Log the user in after resetting password
+    createSendToken(user, 200, res);
+});
+
+export const updatePassword = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    // 1) Get user from collection
+    // The user is already attached to req.user by the protect middleware
+    const user = await User.findById((req as any).user.id).select('+password');
+
+    if (!user) {
+        return next(new AppError('User not found', 404));
+    }
+
+    // 2) Check if current password is correct
+    if (!(await user.correctPassword(req.body.currentPassword))) {
+        return next(new AppError('Your current password is wrong', 401));
+    }
+
+    // 3) Update password
+    user.password = req.body.newPassword;
+    await user.save();
+
+    // 4) Log user in, send JWT
+    createSendToken(user, 200, res);
 });

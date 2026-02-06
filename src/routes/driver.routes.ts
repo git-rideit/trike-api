@@ -7,6 +7,7 @@ const router = express.Router();
 router.use(protect);
 
 // Driver only routes
+router.patch('/profile', restrictTo('driver'), driverController.updateProfile);
 router.patch('/location', restrictTo('driver'), driverController.updateLocation);
 router.patch('/status', restrictTo('driver'), driverController.updateStatus);
 router.get('/stats', restrictTo('driver'), driverController.getDriverStats);

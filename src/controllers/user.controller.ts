@@ -52,3 +52,24 @@ export const updateProfilePicture = catchAsync(async (req: Request, res: Respons
         data: { user }
     });
 });
+
+export const updatePreferences = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { pushNotifications, emailNotifications, smsNotifications } = req.body;
+
+    // Use findOneAndUpdate to merge preferences if needed, or better yet, just set them.
+    // Assuming partial update is desired.
+    const user = await User.findByIdAndUpdate(
+        (req as any).user.id,
+        {
+            'notificationPreferences.pushNotifications': pushNotifications,
+            'notificationPreferences.emailNotifications': emailNotifications,
+            'notificationPreferences.smsNotifications': smsNotifications
+        },
+        { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+        status: 'success',
+        data: { user }
+    });
+});

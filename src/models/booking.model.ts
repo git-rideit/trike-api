@@ -18,6 +18,8 @@ export interface IBooking extends Document {
     paymentStatus: 'pending' | 'paid';
     cancelledBy?: 'user' | 'driver' | 'admin';
     cancellationReason?: string;
+    rating?: number;
+    feedback?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -53,7 +55,9 @@ const BookingSchema: Schema = new Schema({
         enum: ['pending', 'paid']
     },
     cancelledBy: { type: String, enum: ['user', 'driver', 'admin'] },
-    cancellationReason: { type: String }
+    cancellationReason: { type: String },
+    rating: { type: Number, min: 1, max: 5 },
+    feedback: { type: String }
 }, {
     timestamps: true
 });

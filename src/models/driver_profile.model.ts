@@ -16,6 +16,8 @@ export interface IDriverProfile extends Document {
         coordinates: number[];
     };
     violationCount: number;
+    averageRating: number;
+    totalRatings: number;
 }
 
 const DriverProfileSchema: Schema = new Schema({
@@ -37,7 +39,9 @@ const DriverProfileSchema: Schema = new Schema({
         type: { type: String, default: 'Point' },
         coordinates: { type: [Number], default: [0, 0] }
     },
-    violationCount: { type: Number, default: 0 }
+    violationCount: { type: Number, default: 0 },
+    averageRating: { type: Number, default: 0 },
+    totalRatings: { type: Number, default: 0 }
 }, {
     timestamps: true
 });

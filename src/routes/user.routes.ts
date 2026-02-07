@@ -120,6 +120,7 @@ router.route('/')
 
 router.patch('/profile-picture', upload.single('profilePicture'), userController.updateProfilePicture);
 router.patch('/preferences', userController.updatePreferences);
+router.patch('/fcm-token', userController.updateFcmToken);
 
 router.route('/:id')
     .get(userController.getUser);

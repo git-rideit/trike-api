@@ -11,6 +11,7 @@ export interface IUser extends Document {
     isVerified: boolean;
     status: 'active' | 'suspended' | 'deactivated' | 'pending';
     createdAt: Date;
+    fcmToken?: string;
     correctPassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -40,6 +41,7 @@ const UserSchema: Schema = new Schema({
     },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
+    fcmToken: { type: String },
 }, {
     timestamps: true,
 });

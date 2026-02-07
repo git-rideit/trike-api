@@ -73,3 +73,22 @@ export const updatePreferences = catchAsync(async (req: Request, res: Response, 
         data: { user }
     });
 });
+
+export const updateFcmToken = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { fcmToken } = req.body;
+
+    if (!fcmToken) {
+        return next(new AppError('Please provide fcmToken', 400));
+    }
+
+    const user = await User.findByIdAndUpdate(
+        (req as any).user.id,
+        { fcmToken },
+        { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+        status: 'success',
+        data: { user }
+    });
+});

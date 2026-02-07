@@ -7,6 +7,8 @@ import FareConfig from '../models/fare_config.model'; // NEW
 import { FareService } from '../services/fare.service';
 import { catchAsync } from '../utils/catchAsync';
 import { AppError } from '../utils/AppError';
+import { NotificationService } from '../services/notification.service';
+import User from '../models/user.model';
 
 export const calculateFare = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     // Support both POST body and GET query params
@@ -60,7 +62,7 @@ export const calculateFare = catchAsync(async (req: Request, res: Response, next
 });
 
 export const createBooking = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const { pickupLocation, dropoffLocation, paymentMethod, fare, distance } = req.body;
+    const { pickupLocation, dropoffLocation, paymentMethod, fare, distance, driverId } = req.body;
 
     // Calculate Fare
     // Expect pickupLocation.barangay and dropoffLocation.barangay to be present for calculation
@@ -83,13 +85,34 @@ export const createBooking = catchAsync(async (req: Request, res: Response, next
 
     const newBooking = await Booking.create({
         user: req.user._id,
+        driver: driverId,
         pickupLocation,
         dropoffLocation,
         fare: finalFare,
         distance: finalDistance,
         paymentMethod,
-        status: 'pending'
+        status: driverId ? 'pending' : 'pending' // Just 'pending' either way
     });
+
+    // Notify Driver
+    if (driverId) {
+        const driverUser = await User.findById(driverId);
+        if (driverUser && driverUser.fcmToken) {
+            const studentName = req.user.name;
+            await NotificationService.sendPushNotification(
+                driverUser.fcmToken,
+                'New Ride Request',
+                `${studentName} booked a ride`,
+                {
+                    rideId: newBooking._id,
+                    type: 'ride_request',
+                    studentName: studentName
+                }
+            );
+        }
+    } else {
+        // Broadcast logic (optional, future implementation)
+    }
 
     res.status(201).json({
         status: 'success',
@@ -245,7 +268,7 @@ export const updateBookingStatus = catchAsync(async (req: Request, res: Response
         const booking = await Booking.findByIdAndUpdate(req.params.id, {
             status: 'accepted',
             driver: req.user._id
-        }, { new: true });
+        }, { new: true }).populate('user');
 
         if (!booking) {
             return next(new AppError('Booking could not be updated', 500));
@@ -255,9 +278,31 @@ export const updateBookingStatus = catchAsync(async (req: Request, res: Response
         await Notification.create({
             user: booking.user,
             title: 'Ride Accepted',
-            message: 'A driver has accepted your ride request.',
+            message: `Ride accepted by ${req.user.name}`,
             type: 'booking'
         });
+
+        // Send Push Notification
+        // Need Plate Number? Driver acts as User but has DriverProfile.
+        // We can fetch DriverProfile or just use Name. User requested Plate Number.
+        const driverProfile = await DriverProfile.findOne({ user: req.user._id });
+        const plateNumber = driverProfile ? driverProfile.tricyclePlateNumber : '';
+
+        const student = await User.findById(booking.user);
+        if (student?.fcmToken) {
+            await NotificationService.sendPushNotification(
+                student.fcmToken,
+                'Ride Accepted',
+                `Ride accepted by ${req.user.name} and ${plateNumber}`,
+                {
+                    rideId: booking._id,
+                    type: 'ride_update',
+                    status: 'accepted',
+                    driverName: req.user.name,
+                    plateNumber
+                }
+            );
+        }
 
         return res.status(200).json({ status: 'success', data: { booking } });
     }
@@ -278,7 +323,7 @@ export const updateBookingStatus = catchAsync(async (req: Request, res: Response
         status,
         cancellationReason,
         ...(status === 'cancelled' ? { cancelledBy: req.user.role } : {})
-    }, { new: true });
+    }, { new: true }).populate('user').populate('driver');
 
     if (!booking) {
         return next(new AppError('No booking found with that ID', 404));
@@ -286,15 +331,35 @@ export const updateBookingStatus = catchAsync(async (req: Request, res: Response
 
     // Create Notification
     const recipient = req.user.role === 'driver' ? booking.user : booking.driver;
-    // Only send if recipient exists (e.g. if driver cancels, tell user. If user cancels, tell driver?)
-    // Actually booking.driver might be null if cancelled before acceptance, but here we are in "assigned driver" block usually.
+
     if (recipient) {
+        let title = `Ride Update: ${status}`;
+        let message = `Your ride status has been updated to ${status}.`;
+
+        if (status === 'completed') {
+            title = 'Ride Completed';
+            message = 'Thanks for trusting us';
+        }
+
         await Notification.create({
-            user: recipient,
-            title: `Ride Update: ${status}`,
-            message: `Your ride status has been updated to ${status}.`,
+            user: recipient._id || recipient,
+            title,
+            message,
             type: 'booking'
         });
+
+        // Send Push Notification
+        // recipient might be populated or just ID. populate() above ensures it is populated if we used the path
+        // but User.findById(recipient._id) is safer to get fcmToken
+        const recipientUser = await User.findById(recipient._id || recipient);
+        if (recipientUser?.fcmToken) {
+            await NotificationService.sendPushNotification(
+                recipientUser.fcmToken,
+                title,
+                message,
+                { rideId: booking._id, type: 'ride_update', status }
+            );
+        }
     }
 
     res.status(200).json({
@@ -358,4 +423,58 @@ export const exportBookings = catchAsync(async (req: Request, res: Response, nex
     } catch (err) {
         return next(new AppError('Error generating CSV', 500));
     }
+});
+
+export const rateBooking = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { rating, feedback } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+        return next(new AppError('Please provide a rating between 1 and 5', 400));
+    }
+
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return next(new AppError('No booking found', 404));
+
+    // Only passenger can rate
+    if (booking.user.toString() !== req.user._id.toString()) {
+        return next(new AppError('Only the passenger can rate this ride', 403));
+    }
+
+    if (booking.status !== 'completed') {
+        return next(new AppError('You can only rate completed rides', 400));
+    }
+
+    // Prevent double rating
+    if (booking.rating) {
+        return next(new AppError('You have already rated this ride', 400));
+    }
+
+    // Update Booking
+    booking.rating = rating;
+    booking.feedback = feedback;
+    await booking.save();
+
+    // Update Driver Profile
+    if (booking.driver) {
+        const driverProfile = await DriverProfile.findOne({ user: booking.driver });
+        if (driverProfile) {
+            const currentTotal = driverProfile.totalRatings || 0;
+            const currentAvg = driverProfile.averageRating || 0;
+
+            // New Average = (OldAvg * OldTotal + NewRating) / (OldTotal + 1)
+            const newTotal = currentTotal + 1;
+            const newAvg = ((currentAvg * currentTotal) + rating) / newTotal;
+
+            driverProfile.totalRatings = newTotal;
+            driverProfile.averageRating = parseFloat(newAvg.toFixed(2));
+            await driverProfile.save();
+        }
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            booking
+        }
+    });
 });
